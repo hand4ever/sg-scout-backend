@@ -1,0 +1,27 @@
+# SG Scout Backend — API 调试集合 (REST Client for VSCode / JetBrains)
+
+@host = http://localhost:1324
+
+### 健康检查
+GET {{host}}/common/health
+
+### 应用版本信息
+GET {{host}}/common/version
+
+### 应用设置
+GET {{host}}/common/setting
+
+### Demo - 多值查询参数绑定
+GET {{host}}/demo/search?tag=go&tag=web&tag=api
+
+### Demo - 路径参数绑定
+GET {{host}}/demo/echo/hello
+
+### CORS - OPTIONS 预检 (模拟浏览器跨域预检)
+OPTIONS {{host}}/demo/search
+Origin: https://example.com
+Access-Control-Request-Method: POST
+
+### CORS - 跨域 GET
+GET {{host}}/demo/search?tag=go
+Origin: https://example.com

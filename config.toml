@@ -1,0 +1,13 @@
+# SG Scout Backend Configuration
+# Missing or invalid file → falls back to built-in defaults (see config package).
+
+[app]
+name = "SG Scout"
+version = "0.1.0"
+build_time = "2026-09-02"
+
+[server]
+port = ":1324"
+
+[database.mysql]
+dsn = "root:@tcp(127.0.0.1:3306)/sg_scout?charset=utf8mb4&parseTime=True&loc=Local"
