@@ -1,0 +1,13 @@
+[Unit]
+Description=SG Scout Backend (Go/Echo, port 1324)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/project/sg-scout/backend
+ExecStart=/opt/project/sg-scout/backend/sg-scout-backend
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
