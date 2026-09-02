@@ -21,6 +21,10 @@ help: ## help: 显示帮助 (Show available commands)
 	@echo "测试 (Test):"
 	@grep -E '^[a-zA-Z_-]+:.*?## test:' $(firstword $(MAKEFILE_LIST)) | sort | \
 		awk -F':.*?## test: ' '{printf "  make %-15s %s\n", $$1, $$2}'
+	@echo ""
+	@echo "部署 (Deploy):"
+	@grep -E '^[a-zA-Z_-]+:.*?## deploy:' $(firstword $(MAKEFILE_LIST)) | sort | \
+		awk -F':.*?## deploy: ' '{printf "  make %-15s %s\n", $$1, $$2}'
 
 .PHONY: rundev
 rundev: ## dev: 启动本地开发服务 (Start local development server)
@@ -65,3 +69,13 @@ clean: ## build: 清理编译产物 (Remove build artifacts)
 	@echo "Cleaning build artifacts..."
 	@rm -rf $(BIN_DIR)
 	@echo "Done."
+
+# Deploy variables (iqa demo server: 111.229.4.203, ssh alias from ~/.ssh/config)
+DEPLOY_PATH ?= /opt/project/sg-scout/backend
+DEPLOY_SERVICE ?= sg-scout-backend
+
+.PHONY: deploy
+deploy: build-linux ## deploy: 部署到 iqa 演示机 (scp + systemd restart + health check)
+	@echo "Uploading to iqa ($(DEPLOY_SERVICE))..."
+	@scp -q $(BIN_DIR)/$(BIN_NAME) deploy/sg-scout-backend.service config.toml iqa:/tmp/
+	@ssh iqa 'install -m 755 /tmp/$(BIN_NAME) $(DEPLOY_PATH)/$(BIN_NAME) && install -m 644 /tmp/sg-scout-backend.service /etc/systemd/system/$(DEPLOY_SERVICE).service && install -m 644 /tmp/config.toml $(DEPLOY_PATH)/config.toml && systemctl daemon-reload && systemctl restart $(DEPLOY_SERVICE) && sleep 2 && curl -sf http://127.0.0.1:1324/common/health && echo "Deploy complete: DEPLOY_OK"'
