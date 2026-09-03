@@ -6,6 +6,7 @@ import (
 	"github.com/labstack/echo/v5"
 	"sg.scout/response"
 	crawlersvc "sg.scout/service/crawler"
+	proofreadsvc "sg.scout/service/proofread"
 )
 
 // --- Task control endpoints (feature 002 US3, engine-neutral) ---
@@ -38,10 +39,16 @@ func (*_Crawler) StopTask(c *echo.Context) error {
 }
 
 // DeleteTask DELETE /crawler/tasks/{id} — cascade delete (FR-021).
+// Proofread documents bound to the task are removed first (feature 004
+// FR-019); the crawler service itself stays proofread-agnostic (no package
+// cycle: proofread → crawler is one-directional, research D9).
 func (*_Crawler) DeleteTask(c *echo.Context) error {
 	id, err := pathID(c, "id")
 	if err != nil {
 		return err
+	}
+	if err := proofreadsvc.DeleteByTask(id); err != nil {
+		return respErr(c, err)
 	}
 	if err := crawlersvc.DeleteTask(id); err != nil {
 		return respErr(c, err)
@@ -81,10 +88,15 @@ func (*_Crawler) GetPageVersion(c *echo.Context) error {
 }
 
 // DeletePage DELETE /crawler/pages/{id} — delete page + versions + files.
+// Page-bound proofread documents are removed first (feature 004 FR-019,
+// research D9; DeleteByPage is idempotent).
 func (*_Crawler) DeletePage(c *echo.Context) error {
 	id, err := pathID(c, "id")
 	if err != nil {
 		return err
+	}
+	if err := proofreadsvc.DeleteByPage(id); err != nil {
+		return respErr(c, err)
 	}
 	if err := crawlersvc.DeletePage(id); err != nil {
 		return respErr(c, err)

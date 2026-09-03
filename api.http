@@ -112,3 +112,77 @@ GET {{host}}/crawler/pages/1/export
 
 ### 删除单个页面（级联版本与文件）
 DELETE {{host}}/crawler/pages/1
+
+### ================= 校对模块（feature 004 /proofreads）=================
+
+### 校对文档列表（自由文本/派生为主；?page_id= 探测页面绑定文档）
+GET {{host}}/proofreads
+
+### 创建页面校对文档（1:1，重复 409）
+POST {{host}}/proofreads
+Content-Type: application/json
+
+{ "source_type": "page", "page_id": 1 }
+
+### 创建自由文本校对文档
+POST {{host}}/proofreads
+Content-Type: application/json
+
+{ "source_type": "text", "title": "示例短文", "content": "这是一段需要校对\n的示例正文。" }
+
+### 校对文档详情（底稿全文+卡片+派生链）
+GET {{host}}/proofreads/1
+
+### 升级底稿至页面最新版本（无新版本 409）
+POST {{host}}/proofreads/1/upgrade
+
+### 删除校对文档（级联卡片+日志）
+DELETE {{host}}/proofreads/1
+
+### 新建卡片：改正（重叠 400）
+POST {{host}}/proofreads/1/cards
+Content-Type: application/json
+
+{ "op_type": "fix", "start_line": 1, "start_off": 0, "end_line": 1, "end_off": 2, "replacement": "正确", "reason": "错别字" }
+
+### 新建卡片：增补（空点）
+POST {{host}}/proofreads/1/cards
+Content-Type: application/json
+
+{ "op_type": "insert", "start_line": 1, "start_off": 2, "end_line": 1, "end_off": 2, "replacement": "，补充", "reason": "缺标点" }
+
+### 编辑卡片字段（不改状态）
+PATCH {{host}}/proofreads/1/cards/1
+Content-Type: application/json
+
+{ "reason": "修正理由" }
+
+### 状态改判：已接受
+POST {{host}}/proofreads/1/cards/1/state
+Content-Type: application/json
+
+{ "status": "accepted" }
+
+### 状态改判：已驳回（可填理由）
+POST {{host}}/proofreads/1/cards/2/state
+Content-Type: application/json
+
+{ "status": "rejected", "reject_reason": "此处无误" }
+
+### 删除卡片
+DELETE {{host}}/proofreads/1/cards/1
+
+### 校对日志（只读）
+GET {{host}}/proofreads/1/logs
+
+### 修订稿预览（revised+marks；无已接受 400）
+GET {{host}}/proofreads/1/revision
+
+### 导出纯净修订稿
+GET {{host}}/proofreads/1/revision/export
+
+### 导出勘误表（CSV，仅已接受）
+GET {{host}}/proofreads/1/errata/export
+
+### 基于修订稿派生新校对文档
+POST {{host}}/proofreads/1/revision-doc

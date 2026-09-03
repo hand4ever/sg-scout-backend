@@ -90,6 +90,31 @@ sg-scout-backend/
 | GET | `/demo/search?tag=a&tag=b` | 演示：多值查询参数绑定 |
 | GET | `/demo/echo/:str` | 演示：路径参数绑定 |
 
+爬虫/设置接口见 feature 001/002 契约（`../sg-scout/specs/00*/contracts/api.md`）与 `api.http`。
+
+### 校对模块 API（feature 004-text-proofreading，契约见 `../sg-scout/specs/004-text-proofreading/contracts/api.md`）
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/proofreads` | 校对文档列表（?source= / ?page_id= 过滤） |
+| POST | `/proofreads` | 创建校对文档（source_type=page\|text） |
+| GET | `/proofreads/:id` | 文档详情（底稿全文+卡片+派生链+升级提示） |
+| DELETE | `/proofreads/:id` | 删除文档（级联卡片+日志） |
+| POST | `/proofreads/:id/upgrade` | 升级页面底稿至最新版本（卡片重置待确认） |
+| POST | `/proofreads/:id/cards` | 新建校对卡片（重叠 400，服务端取原文） |
+| PATCH | `/proofreads/:id/cards/:cid` | 编辑卡片字段（不改状态） |
+| DELETE | `/proofreads/:id/cards/:cid` | 删除卡片 |
+| POST | `/proofreads/:id/cards/:cid/state` | 状态改判（pending/accepted/rejected） |
+| GET | `/proofreads/:id/logs` | 校对日志（只读，倒序） |
+| GET | `/proofreads/:id/revision` | 修订稿预览（revised+marks） |
+| GET | `/proofreads/:id/revision/export` | 导出纯净修订稿（.md） |
+| GET | `/proofreads/:id/errata/export` | 导出勘误表（CSV，仅已接受） |
+| POST | `/proofreads/:id/revision-doc` | 基于修订稿派生新校对文档 |
+
+## 更新日志
+
+- 2026-09-04 feature 004：新增校对模块路由组 `/proofreads`（三表 schema/007-proofread.sql）
+
 ## 本地开发
 
 ```bash
