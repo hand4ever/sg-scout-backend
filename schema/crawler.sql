@@ -5,10 +5,15 @@
 CREATE TABLE IF NOT EXISTS crawler_task (
     id                  BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     source_type         VARCHAR(32)     NOT NULL DEFAULT 'web',
+    engine              VARCHAR(16)     NOT NULL DEFAULT 'goquery',
     entry_url           VARCHAR(2048)   NOT NULL,
     entry_url_key       CHAR(64)        NOT NULL,
     depth               INT             NOT NULL DEFAULT 0,
     include_subdomain   TINYINT(1)      NOT NULL DEFAULT 0,
+    allow_hosts         VARCHAR(512)    NOT NULL DEFAULT '',  -- feature 002 ext-host whitelist (comma-separated)
+    ignore_robots       TINYINT(1)      NOT NULL DEFAULT 0,   -- feature 002: 1 = fetch robots-disallowed paths (wechat); API surfaces respect_robots (inverse)
+    include_url         VARCHAR(1024)   NOT NULL DEFAULT '',  -- feature 002: only discovered links containing a substring are followed (entry always fetched)
+    content_mode        VARCHAR(16)     NOT NULL DEFAULT 'main', -- feature 002: main = article-only (readability); full = whole page
     page_limit          INT             NOT NULL DEFAULT 10,
     retry_times         INT             NOT NULL DEFAULT 3,
     retry_interval_s    INT             NOT NULL DEFAULT 2,
@@ -28,7 +33,7 @@ CREATE TABLE IF NOT EXISTS crawler_run (
     id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     task_id       BIGINT UNSIGNED NOT NULL,
     kind          VARCHAR(8)      NOT NULL,
-    engine        VARCHAR(16)     NOT NULL DEFAULT 'firecrawl',
+    engine        VARCHAR(16)     NOT NULL DEFAULT 'goquery',
     job_id        VARCHAR(64)     NULL,
     status        VARCHAR(16)     NOT NULL DEFAULT 'queued',
     started_at    DATETIME        NULL,
@@ -89,4 +94,27 @@ CREATE TABLE IF NOT EXISTS run_page (
     PRIMARY KEY (id),
     UNIQUE KEY uk_run_page (run_id, page_id),
     KEY idx_runpage_status (run_id, status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Feature 002: system settings (runtime config source) + change log.
+CREATE TABLE IF NOT EXISTS system_settings (
+    id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    skey        VARCHAR(64)     NOT NULL,
+    svalue      JSON            NOT NULL,
+    note        VARCHAR(512)    NULL,
+    created_at  DATETIME        NOT NULL,
+    updated_at  DATETIME        NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_settings_key (skey)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS system_settings_log (
+    id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    skey        VARCHAR(64)     NOT NULL,
+    old_value   JSON            NULL,
+    new_value   JSON            NOT NULL,
+    note        VARCHAR(512)    NULL,
+    created_at  DATETIME        NOT NULL,
+    PRIMARY KEY (id),
+    KEY idx_settings_log_key_time (skey, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

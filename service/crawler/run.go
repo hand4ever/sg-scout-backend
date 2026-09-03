@@ -34,8 +34,11 @@ func CreateRun(taskID uint64, kind string) (*model.CrawlerRun, error) {
 	run := &model.CrawlerRun{
 		TaskID: taskID,
 		Kind:   kind,
-		Engine: "firecrawl",
+		Engine: task.Engine, // snapshot from task (feature 002 FR-003); legacy rows keep their archived value
 		Status: "queued",
+	}
+	if run.Engine == "" {
+		run.Engine = "goquery"
 	}
 	err = model.DB.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(run).Error; err != nil {
@@ -117,13 +120,13 @@ type RunDetailView struct {
 
 // RunPageItem is one page outcome row within a run detail.
 type RunPageItem struct {
-	PageID    uint64  `json:"page_id"`
-	URL       string  `json:"url"`
-	Title     string  `json:"title"`
-	Status    string  `json:"status"`
-	Error     string  `json:"error,omitempty"`
+	PageID    uint64     `json:"page_id"`
+	URL       string     `json:"url"`
+	Title     string     `json:"title"`
+	Status    string     `json:"status"`
+	Error     string     `json:"error,omitempty"`
 	CrawledAt *time.Time `json:"crawled_at"`
-	Depth     int     `json:"depth"`
+	Depth     int        `json:"depth"`
 }
 
 // GetRunDetail loads a run with its per-page outcomes (latest run page list).

@@ -10,6 +10,7 @@ import (
 	"sg.scout/config"
 	"sg.scout/model"
 	"sg.scout/service/crawler/engine"
+	"sg.scout/service/crawler/urlutil"
 )
 
 // storageRoot returns the artifact file root from config (default ./data).
@@ -29,8 +30,8 @@ func pageDir(taskID, pageID uint64) string {
 // currentMDPath is the always-latest body markdown file (downstream entry).
 func currentMDPath(dir string) string { return filepath.Join(dir, filepath.Base(dir)+".md") }
 
-func historyDir(dir string) string      { return filepath.Join(dir, "history") }
-func backupHTMLPath(dir string) string  { return filepath.Join(dir, "backup.html") }
+func historyDir(dir string) string     { return filepath.Join(dir, "history") }
+func backupHTMLPath(dir string) string { return filepath.Join(dir, "backup.html") }
 
 func versionPath(dir string, version int) string {
 	return filepath.Join(historyDir(dir), fmt.Sprintf("%04d.md", version))
@@ -97,11 +98,21 @@ func writeArtifacts(dir string, md string, version int, rawHTML string) error {
 // SavePageResult persists one engine page result into DB + files, returning
 // its outcome status (new|unchanged|changed|offline|failed) per FR-008/FR-028.
 func SavePageResult(t *model.CrawlerTask, runID uint64, pr *engine.PageResult, depth int) (string, error) {
+	// content_mode="main": replace full-page markdown with go-readability
+	// extracted article body before archiving (feature 002). Scoped to the
+	// goquery engine (local fetch pipeline); cloud/render engines keep their
+	// own full markdown until a unified extractor lands.
+	if t.ContentMode == "main" && t.Engine == "goquery" && pr.RawHTML != "" && !pr.Failed {
+		if title, mainMD, ok := engine.ExtractMainMarkdown(pr.RawHTML, pr.URL); ok {
+			pr.Title = title
+			pr.Markdown = mainMD
+		}
+	}
 	status, err := classifyPage(pr)
 	if err != nil {
 		return "", err
 	}
-	key, err := URLKey(pr.URL)
+	key, err := urlutil.URLKey(pr.URL)
 	if err != nil {
 		return "", err
 	}
@@ -128,7 +139,7 @@ func SavePageResult(t *model.CrawlerTask, runID uint64, pr *engine.PageResult, d
 	if md == "" {
 		md = pr.URL // never write an empty body file (contract: title empty -> url)
 	}
-	fp := Fingerprint(md)
+	fp := urlutil.Fingerprint(md)
 	now := time.Now()
 
 	if pageNotFound {
@@ -157,6 +168,10 @@ func SavePageResult(t *model.CrawlerTask, runID uint64, pr *engine.PageResult, d
 		return "unchanged", upsertRunPage(runID, page.ID, "unchanged", "")
 	}
 	next := page.LatestVersion + 1
+	kind := "change"
+	if page.LatestVersion == 0 {
+		kind = "first" // retried page that never had content yet (feature 002 retry-failed)
+	}
 	// Refresh in-memory state first so the front-matter uses the new values.
 	page.Title = pr.Title
 	page.URL = pr.URL
@@ -176,7 +191,7 @@ func SavePageResult(t *model.CrawlerTask, runID uint64, pr *engine.PageResult, d
 	if err := writeArtifacts(dir, body, next, pr.RawHTML); err != nil {
 		return "", fmt.Errorf("write artifacts: %w", err)
 	}
-	if err := createVersion(t.ID, page.ID, runID, next, "change", fp, len(md), now); err != nil {
+	if err := createVersion(t.ID, page.ID, runID, next, kind, fp, len(md), now); err != nil {
 		return "", err
 	}
 	return "changed", upsertRunPage(runID, page.ID, "changed", "")

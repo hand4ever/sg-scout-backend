@@ -81,14 +81,8 @@ func (*_Crawler) GetRun(c *echo.Context) error {
 	return response.Ok(c, dv)
 }
 
-// Settings GET /crawler/settings — read-only engine/system info.
-func (*_Crawler) Settings(c *echo.Context) error {
-	s, err := crawlersvc.SystemSettings()
-	if err != nil {
-		return respErr(c, err)
-	}
-	return response.Ok(c, s)
-}
+// Settings GET /crawler/settings — replaced by handler/settings.go (US4).
+// _ = (*_Crawler)(nil)
 
 // GetPage GET /crawler/pages/{id} — page detail: content + version timeline.
 func (*_Crawler) GetPage(c *echo.Context) error {

@@ -31,15 +31,8 @@ func notImplemented(c *echo.Context) error {
 
 // --- Task endpoints (CreateTask/ListTasks/GetTask live in crawler_task.go) ---
 
-func (*_Crawler) CheckTask(c *echo.Context) error   { return notImplemented(c) }
-func (*_Crawler) StopTask(c *echo.Context) error    { return notImplemented(c) }
-func (*_Crawler) DeleteTask(c *echo.Context) error  { return notImplemented(c) }
-
 // --- Run endpoints ---
 
-func (*_Crawler) RetryFailed(c *echo.Context) error    { return notImplemented(c) }
-
 // --- Page & version endpoints ---
-
-func (*_Crawler) GetPageVersion(c *echo.Context) error      { return notImplemented(c) }
-func (*_Crawler) DeletePage(c *echo.Context) error          { return notImplemented(c) }
+// Task control / run control / version / delete-page handlers live in
+// crawler_control.go (feature 002 US3).

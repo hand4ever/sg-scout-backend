@@ -13,39 +13,16 @@ import (
 // RunViewOf exports runView for the handler layer.
 func RunViewOf(r *model.CrawlerRun) *RunView { return runView(r) }
 
-// SystemSettingsView is GET /crawler/settings payload.
-type SystemSettingsView struct {
-	Concurrency int    `json:"concurrency"`
-	StorageRoot string `json:"storage_root"`
-	Engine      struct {
-		Provider string `json:"provider"`
-		BaseURL  string `json:"base_url"`
-	} `json:"engine"`
-	Version string `json:"version"`
-}
-
-// SystemSettings reports read-only engine/system configuration.
-func SystemSettings() (*SystemSettingsView, error) {
-	v := &SystemSettingsView{
-		Concurrency: concurrencyOrDefault(),
-		StorageRoot: storageRoot(),
-	}
-	v.Engine.Provider = "firecrawl"
-	v.Engine.BaseURL = engineBaseURL()
-	v.Version = configAppVersion()
-	return v, nil
-}
-
 // PageView is the page header payload inside page detail.
 type PageView struct {
-	ID             uint64    `json:"id"`
-	TaskID         uint64    `json:"task_id"`
-	URL            string    `json:"url"`
-	Title          string    `json:"title"`
-	Depth          int       `json:"depth"`
-	LatestVersion  int       `json:"latest_version"`
-	FirstSeenAt    time.Time `json:"first_seen_at"`
-	LastSeenAt     time.Time `json:"last_seen_at"`
+	ID            uint64    `json:"id"`
+	TaskID        uint64    `json:"task_id"`
+	URL           string    `json:"url"`
+	Title         string    `json:"title"`
+	Depth         int       `json:"depth"`
+	LatestVersion int       `json:"latest_version"`
+	FirstSeenAt   time.Time `json:"first_seen_at"`
+	LastSeenAt    time.Time `json:"last_seen_at"`
 }
 
 // PageVersionMeta mirrors page_version rows (version timeline).
@@ -59,10 +36,10 @@ type PageVersionMeta struct {
 // PageDetailView is GET /crawler/pages/{id} payload (content = latest body
 // markdown, front-matter stripped; versions = full timeline).
 type PageDetailView struct {
-	Page     *PageView          `json:"page"`
-	Content  string             `json:"content"`
-	Versions []PageVersionMeta  `json:"versions"`
-	Backup   BackupInfo         `json:"backup"`
+	Page     *PageView         `json:"page"`
+	Content  string            `json:"content"`
+	Versions []PageVersionMeta `json:"versions"`
+	Backup   BackupInfo        `json:"backup"`
 }
 
 // BackupInfo describes the html backup file presence.

@@ -1,5 +1,7 @@
-// Package crawler (service/crawler) implements the page crawl & monitor module.
-package crawler
+// Package urlutil holds URL normalization & dedup helpers shared by the
+// crawler service and the local engine driver (feature 002 US3). Moved out
+// of service/crawler so the engine package can import it without a cycle.
+package urlutil
 
 import (
 	"errors"
@@ -35,6 +37,41 @@ var nonWebExtensions = map[string]bool{
 func normalizeHost(host string) string {
 	h := strings.ToLower(host)
 	return strings.TrimPrefix(h, "www.")
+}
+
+// SplitTokens splits a comma/space/; list into trimmed lowercased tokens
+// (no host semantics — used for include_url URL-substring lists).
+func SplitTokens(raw string) []string {
+	var out []string
+	for _, part := range strings.FieldsFunc(raw, func(r rune) bool { return r == ',' || r == ' ' || r == ';' || r == '\n' || r == '\t' }) {
+		p := strings.ToLower(strings.TrimSpace(part))
+		if p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
+// NormalizeHostName exports host normalization for the engine driver.
+func NormalizeHostName(host string) string { return normalizeHost(host) }
+
+// SplitHosts parses a comma/space-separated list of tokens into normalized
+// host names (drop empties, strip scheme/port for host-like entries). Also
+// reused for include_url substring lists where normalization is a no-op apart
+// from lowercasing.
+func SplitHosts(raw string) []string {
+	var out []string
+	for _, part := range strings.FieldsFunc(raw, func(r rune) bool { return r == ',' || r == ' ' || r == ';' || r == '\n' || r == '	' }) {
+		h := strings.ToLower(strings.TrimSpace(part))
+		if h == "" {
+			continue
+		}
+		if u, err := url.Parse("//" + h); err == nil && u.Host != "" {
+			h = u.Host
+		}
+		out = append(out, normalizeHost(h))
+	}
+	return out
 }
 
 // normalizeURL canonicalizes a URL for dedup (FR-010): lowercase scheme/host,
@@ -120,4 +157,3 @@ func IsNonWebURL(raw string) bool {
 	}
 	return nonWebExtensions[lower[idx:]]
 }
-

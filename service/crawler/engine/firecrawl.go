@@ -152,17 +152,17 @@ func (c *Client) Scrape(ctx context.Context, rawURL string) (*PageResult, error)
 // SubmitCrawl implements Engine: async whole-site crawl (task depth >= 1).
 func (c *Client) SubmitCrawl(ctx context.Context, req *CrawlRequest) (string, error) {
 	payload := map[string]any{
-		"url":                  req.URL,
-		"maxDiscoveryDepth":    req.MaxDiscoveryDepth,
-		"crawlEntireDomain":    true,
-		"allowSubdomains":      req.AllowSubdomains,
-		"allowExternalLinks":   false,
+		"url":                   req.URL,
+		"maxDiscoveryDepth":     req.MaxDiscoveryDepth,
+		"crawlEntireDomain":     true,
+		"allowSubdomains":       req.AllowSubdomains,
+		"allowExternalLinks":    false,
 		"ignoreQueryParameters": false,
-		"sitemap":              "skip",
-		"ignoreRobotsTxt":      false,
-		"limit":                req.Limit,
-		"excludePaths":         []string{nonWebPathRegex},
-		"regexOnFullURL":       true,
+		"sitemap":               "skip",
+		"ignoreRobotsTxt":       false,
+		"limit":                 req.Limit,
+		"excludePaths":          []string{nonWebPathRegex},
+		"regexOnFullURL":        true,
 		"scrapeOptions": map[string]any{
 			"formats":         []string{"markdown", "html"},
 			"onlyMainContent": false,

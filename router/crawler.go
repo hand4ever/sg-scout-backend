@@ -8,6 +8,8 @@ import (
 // crawler registers the crawler module route group (/crawler, contracts/api.md).
 func crawler(e *echo.Echo) {
 	g := e.Group("/crawler")
+	// Engine registry (feature 002 US1).
+	g.GET("/engines", handler.EnginesHandler.List)
 	// Task endpoints (US1/US4).
 	g.POST("/tasks", handler.Crawler.CreateTask)
 	g.GET("/tasks", handler.Crawler.ListTasks)
@@ -25,6 +27,9 @@ func crawler(e *echo.Echo) {
 	g.GET("/pages/:id/versions/:version", handler.Crawler.GetPageVersion)
 	g.DELETE("/pages/:id", handler.Crawler.DeletePage)
 	g.GET("/pages/:id/export", handler.Crawler.ExportPage)
-	// System settings (read-only).
-	g.GET("/settings", handler.Crawler.Settings)
+	// System settings (feature 002 US4: DB runtime config + audit).
+	g.GET("/settings", handler.SettingsHandler.Get)
+	g.PUT("/settings", handler.SettingsHandler.Update)
+	g.POST("/settings/reset", handler.SettingsHandler.Reset)
+	g.GET("/settings/history", handler.SettingsHandler.History)
 }

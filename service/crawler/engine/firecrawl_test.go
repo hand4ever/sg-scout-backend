@@ -99,15 +99,15 @@ func TestSubmitCrawl_Parameters(t *testing.T) {
 	}
 	// JSON numbers decode as float64; compare in that domain.
 	checks := map[string]any{
-		"maxDiscoveryDepth":    float64(2),
-		"allowSubdomains":      true,
-		"crawlEntireDomain":    true,
-		"allowExternalLinks":   false,
+		"maxDiscoveryDepth":     float64(2),
+		"allowSubdomains":       true,
+		"crawlEntireDomain":     true,
+		"allowExternalLinks":    false,
 		"ignoreQueryParameters": false,
-		"sitemap":              "skip",
-		"ignoreRobotsTxt":      false,
-		"limit":                float64(10),
-		"delay":                float64(1),
+		"sitemap":               "skip",
+		"ignoreRobotsTxt":       false,
+		"limit":                 float64(10),
+		"delay":                 float64(1),
 	}
 	for k, want := range checks {
 		if got[k] != want {

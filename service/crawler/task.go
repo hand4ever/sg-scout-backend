@@ -3,11 +3,15 @@ package crawler
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"gorm.io/gorm"
 	crawlerentity "sg.scout/entity/crawler"
 	"sg.scout/model"
+	"sg.scout/service/crawler/engine"
+	"sg.scout/service/crawler/urlutil"
+	"sg.scout/service/settings"
 )
 
 // Sentinel business errors mapped to HTTP statuses by the handler layer.
@@ -29,24 +33,45 @@ func CreateTask(req *crawlerentity.CreateTaskReq) (*TaskView, error) {
 	if req.EntryURL == "" {
 		return nil, fmt.Errorf("%w: entry_url 必填", ErrBadRequest)
 	}
-	key, err := URLKey(req.EntryURL)
+	key, err := urlutil.URLKey(req.EntryURL)
 	if err != nil {
 		return nil, fmt.Errorf("%w: entry_url 必须是可解析的 http(s) 地址", ErrBadRequest)
 	}
 
+	// Engine snapshot (feature 002 FR-003): explicit engine from the request,
+	// else the global default_engine (system_settings, seeded from config.toml
+	// / goquery). Unknown engine ids are rejected loudly (FR-006).
+	eng := req.Engine
+	if eng == "" {
+		if v, ok := settings.GetString(settings.KeyDefaultEngine); ok {
+			eng = v
+		}
+	}
+	if eng == "" {
+		eng = crawlerentity.DefaultEngine
+	}
+	if !engine.Lookup(eng) {
+		return nil, fmt.Errorf("%w: 未知引擎 %q（可用：firecrawl / crawl4ai / goquery）", ErrBadRequest, eng)
+	}
+
 	t := &model.CrawlerTask{
-		SourceType:      "web",
-		EntryURL:        req.EntryURL,
-		EntryURLKey:     key,
-		Depth:           intOr(req.Depth, crawlerentity.DefaultDepth),
+		SourceType:       "web",
+		Engine:           eng,
+		EntryURL:         req.EntryURL,
+		EntryURLKey:      key,
+		Depth:            intOr(req.Depth, crawlerentity.DefaultDepth),
 		IncludeSubdomain: boolOr(req.IncludeSubdomain, false),
-		PageLimit:       intOr(req.PageLimit, crawlerentity.DefaultPageLimit),
-		RetryTimes:      intOr(req.RetryTimes, crawlerentity.DefaultRetryTimes),
-		RetryIntervalS:  intOr(req.RetryIntervalS, crawlerentity.DefaultRetryIntervalS),
-		ThrottlePages:   intOr(req.ThrottlePages, crawlerentity.DefaultThrottlePages),
-		ThrottleSeconds: intOr(req.ThrottleSeconds, crawlerentity.DefaultThrottleSecs),
-		TimeoutS:        intOr(req.TimeoutS, crawlerentity.DefaultTimeoutS),
-		Status:          "pending",
+		AllowHosts:       strings.TrimSpace(req.AllowHosts),
+		IgnoreRobots:     !boolOr(req.RespectRobots, true), // API respect_robots=false ⇒ ignore robots (wechat); zero-value false = respect, DB default keeps it
+		IncludeURL:       strings.TrimSpace(req.IncludeURL),
+		ContentMode:      contentModeOr(req.ContentMode),
+		PageLimit:        intOr(req.PageLimit, crawlerentity.DefaultPageLimit),
+		RetryTimes:       intOr(req.RetryTimes, crawlerentity.DefaultRetryTimes),
+		RetryIntervalS:   intOr(req.RetryIntervalS, crawlerentity.DefaultRetryIntervalS),
+		ThrottlePages:    intOr(req.ThrottlePages, crawlerentity.DefaultThrottlePages),
+		ThrottleSeconds:  intOr(req.ThrottleSeconds, crawlerentity.DefaultThrottleSecs),
+		TimeoutS:         intOr(req.TimeoutS, crawlerentity.DefaultTimeoutS),
+		Status:           "pending",
 	}
 	if t.Depth < 0 {
 		return nil, fmt.Errorf("%w: depth 必须 ≥0", ErrBadRequest)
@@ -157,4 +182,13 @@ func boolOr(p *bool, def bool) bool {
 		return *p
 	}
 	return def
+}
+
+// contentModeOr normalises the task content_mode ("main" | "full"); empty and
+// unknown values fall back to "main" (article-only, feature 002 default).
+func contentModeOr(v string) string {
+	if v == "full" {
+		return "full"
+	}
+	return "main" // "", "main", unknown -> main (non-empty zero default survives GORM create)
 }

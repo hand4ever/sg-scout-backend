@@ -1,0 +1,27 @@
+# SG Scout Backend Configuration (local - git ignored)
+
+[app]
+name = "SG Scout"
+version = "0.1.0"
+build_time = "2026-09-02"
+
+[server]
+port = ":1324"
+
+[database.mysql]
+dsn = "root:@tcp(127.0.0.1:3306)/sg_scout?charset=utf8mb4&parseTime=True&loc=Local"
+
+[crawler]
+concurrency = 1
+storage_root = "./data"
+
+[crawler.engine]
+provider = "goquery"
+
+[crawler.engine.firecrawl]
+base_url = "https://api.firecrawl.dev"
+api_key = "fc-83d4cba2bd16412499d4255dc8f36bf5"
+
+[crawler.engine.crawl4ai]
+base_url = "http://127.0.0.1:11235"
+api_token = "local-sidecar"

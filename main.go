@@ -12,6 +12,7 @@ import (
 	"sg.scout/model"
 	"sg.scout/router"
 	"sg.scout/service/crawler"
+	"sg.scout/service/settings"
 )
 
 // corsConfig defines the CORS middleware configuration.
@@ -37,6 +38,20 @@ func main() {
 	if err := model.InitDB(config.Cfg.Database.MySQL.DSN); err != nil {
 		e.Logger.Error("failed to connect database", "error", err)
 		os.Exit(1)
+	}
+
+	// Feature 002: seed system_settings once (config.toml only seeds first run),
+	// then let DB-authoritative values override the startup-read settings
+	// (restart-effective keys: scheduler concurrency, storage root).
+	if err := settings.Seed(); err != nil {
+		e.Logger.Error("failed to seed system settings", "error", err)
+		os.Exit(1)
+	}
+	if v, ok := settings.GetInt(settings.KeySchedulerConcurrency); ok {
+		config.Cfg.Crawler.Concurrency = v
+	}
+	if v, ok := settings.GetString(settings.KeyStorageRoot); ok {
+		config.Cfg.Crawler.StorageRoot = v
 	}
 
 	e.Use(middleware.RequestLogger())

@@ -25,3 +25,90 @@ Access-Control-Request-Method: POST
 ### CORS - 跨域 GET
 GET {{host}}/demo/search?tag=go
 Origin: https://example.com
+
+# ================= Crawler module (feature 001 + 002) =================
+
+### 引擎注册表（002：三引擎 + 能力/可用性）
+GET {{host}}/crawler/engines
+
+### 全局配置读取（002：DB 运行配置源）
+GET {{host}}/crawler/settings
+
+### 全局配置修改（部分更新，带 note 留痕）
+PUT {{host}}/crawler/settings
+Content-Type: application/json
+
+{ "items": [ { "key": "default_engine", "value": "goquery" } ], "note": "切回默认引擎" }
+
+### 全局配置重置（key 为空=全部）
+POST {{host}}/crawler/settings/reset
+Content-Type: application/json
+
+{ "key": "", "note": "重置为默认" }
+
+### 全局配置变更历史
+GET {{host}}/crawler/settings/history
+
+### 建档（goquery 深度任务，002 示例：瑞金医院境内站）
+POST {{host}}/crawler/tasks
+Content-Type: application/json
+
+{
+  "source_type": "web",
+  "engine": "goquery",
+  "entry_url": "https://www.rjh.com.cn/2018RJPortal/main/rjcz/mtsd/index.shtml",
+  "depth": 0,
+  "include_subdomain": false,
+  "page_limit": 10
+}
+
+### 建档（crawl4ai 引擎示例）
+POST {{host}}/crawler/tasks
+Content-Type: application/json
+
+{ "source_type": "web", "engine": "crawl4ai", "entry_url": "https://www.rjh.com.cn/2018RJPortal/main/rjcz/mtsd/index.shtml", "depth": 0 }
+
+### 建档（未知引擎 → 400 明确错误）
+POST {{host}}/crawler/tasks
+Content-Type: application/json
+
+{ "source_type": "web", "engine": "bogus", "entry_url": "https://example.com" }
+
+### 任务列表
+GET {{host}}/crawler/tasks
+
+### 任务详情（含 runs / latest_run）
+GET {{host}}/crawler/tasks/1
+
+### 开始抓取（建档后手动开跑）
+POST {{host}}/crawler/tasks/1/start
+
+### 手动检查（重新抓取+指纹比对）
+POST {{host}}/crawler/tasks/1/check
+
+### 停止（queued/running 均可停）
+POST {{host}}/crawler/tasks/1/stop
+
+### 删除任务（级联，运行中 409）
+DELETE {{host}}/crawler/tasks/1
+
+### 整任务导出（zip 流）
+GET {{host}}/crawler/tasks/1/export
+
+### 单次执行详情（页面当次状态）
+GET {{host}}/crawler/runs/1
+
+### 重试该次执行的失败页（同 run 补抓）
+POST {{host}}/crawler/runs/1/retry-failed
+
+### 页面详情（正文+版本时间线+备份信息）
+GET {{host}}/crawler/pages/1
+
+### 指定版本正文
+GET {{host}}/crawler/pages/1/versions/1
+
+### 单页导出（zip 流）
+GET {{host}}/crawler/pages/1/export
+
+### 删除单个页面（级联版本与文件）
+DELETE {{host}}/crawler/pages/1

@@ -19,6 +19,9 @@ type PageResult struct {
 	// StatusCode is the TARGET page HTTP status (2xx/304 = clean; 404 = offline;
 	// other 4xx/5xx = failed). Distinct from the engine API request status.
 	StatusCode int
+	// Depth is the layer at which the page was discovered (0 = entry/Scrape;
+	// the local BFS driver sets real layers; cloud engines leave 0).
+	Depth int
 	// Failed marks pages the engine itself could not scrape (network/timeout/
 	// robots) — surfaced via crawl errors, not the data array.
 	Failed bool
@@ -29,12 +32,15 @@ type PageResult struct {
 // CrawlRequest carries crawl job parameters mapped from task configuration
 // (FR-003/011/016/018/022 — research.md §1-§3).
 type CrawlRequest struct {
-	URL             string
+	URL               string
 	MaxDiscoveryDepth int
-	AllowSubdomains bool
-	Limit           int
+	AllowSubdomains   bool
+	AllowHosts        []string // external hosts allowed past the same-site boundary; fetched pages never expand (leaf)
+	IgnoreRobots      bool     // true = fetch robots-disallowed paths (e.g. wechat articles)
+	IncludeURLs       []string // URL substrings; only discovered links containing one are followed (entry always fetched)
+	Limit             int
 	// DelaySeconds spaces requests (FR-018 throttle; forces concurrency 1).
-	DelaySeconds    int
+	DelaySeconds int
 }
 
 // CrawlBatch is a page of results fetched during polling.

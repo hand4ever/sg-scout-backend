@@ -11,11 +11,13 @@ func TestDefaultConfig(t *testing.T) {
 	}
 }
 
-func TestInitConfigMissingFileFallsBackToDefaults(t *testing.T) {
-	if err := InitConfig("definitely-not-exist.toml"); err != nil {
-		t.Fatalf("InitConfig should not error on missing file, got: %v", err)
+func TestInitConfigMissingFileFailsFast(t *testing.T) {
+	// Constitution VI: a missing config file MUST fail loudly (main.go exits),
+	// never silently fall back to defaults.
+	if err := InitConfig("definitely-not-exist.toml"); err == nil {
+		t.Fatal("InitConfig MUST error on missing file (constitution VI: fail fast)")
 	}
 	if Cfg.App.Name != "SG Scout" {
-		t.Fatalf("defaults should survive, got app name: %q", Cfg.App.Name)
+		t.Fatalf("defaults should survive pre-load, got app name: %q", Cfg.App.Name)
 	}
 }

@@ -10,9 +10,14 @@ import (
 type TaskView struct {
 	ID               uint64     `json:"id"`
 	SourceType       string     `json:"source_type"`
+	Engine           string     `json:"engine"`
 	EntryURL         string     `json:"entry_url"`
 	Depth            int        `json:"depth"`
 	IncludeSubdomain bool       `json:"include_subdomain"`
+	AllowHosts       string     `json:"allow_hosts"`
+	RespectRobots    bool       `json:"respect_robots"`
+	IncludeURL       string     `json:"include_url"`
+	ContentMode      string     `json:"content_mode"`
 	PageLimit        int        `json:"page_limit"`
 	RetryTimes       int        `json:"retry_times"`
 	RetryIntervalS   int        `json:"retry_interval_s"`
@@ -28,19 +33,20 @@ type TaskView struct {
 
 // RunView is the run summary payload (crawler_run row, no page list).
 type RunView struct {
-	ID         uint64     `json:"id"`
-	TaskID     uint64     `json:"task_id"`
-	Kind       string     `json:"kind"`
-	Status     string     `json:"status"`
-	StartedAt  *time.Time `json:"started_at"`
-	FinishedAt *time.Time `json:"finished_at"`
-	TotalFound int        `json:"total_found"`
-	PageNew    int        `json:"page_new"`
-	PageChanged int       `json:"page_changed"`
-	PageOffline int       `json:"page_offline"`
-	PageFailed  int       `json:"page_failed"`
-	ErrorMsg   string     `json:"error_msg"`
-	CreatedAt  time.Time  `json:"created_at"`
+	ID          uint64     `json:"id"`
+	TaskID      uint64     `json:"task_id"`
+	Kind        string     `json:"kind"`
+	Engine      string     `json:"engine"`
+	Status      string     `json:"status"`
+	StartedAt   *time.Time `json:"started_at"`
+	FinishedAt  *time.Time `json:"finished_at"`
+	TotalFound  int        `json:"total_found"`
+	PageNew     int        `json:"page_new"`
+	PageChanged int        `json:"page_changed"`
+	PageOffline int        `json:"page_offline"`
+	PageFailed  int        `json:"page_failed"`
+	ErrorMsg    string     `json:"error_msg"`
+	CreatedAt   time.Time  `json:"created_at"`
 }
 
 // taskView builds a TaskView from a task row.
@@ -48,9 +54,14 @@ func taskView(t *model.CrawlerTask) *TaskView {
 	return &TaskView{
 		ID:               t.ID,
 		SourceType:       t.SourceType,
+		Engine:           t.Engine,
 		EntryURL:         t.EntryURL,
 		Depth:            t.Depth,
 		IncludeSubdomain: t.IncludeSubdomain,
+		AllowHosts:       t.AllowHosts,
+		RespectRobots:    !t.IgnoreRobots,
+		IncludeURL:       t.IncludeURL,
+		ContentMode:      t.ContentMode,
 		PageLimit:        t.PageLimit,
 		RetryTimes:       t.RetryTimes,
 		RetryIntervalS:   t.RetryIntervalS,
@@ -70,6 +81,7 @@ func runView(r *model.CrawlerRun) *RunView {
 		ID:          r.ID,
 		TaskID:      r.TaskID,
 		Kind:        r.Kind,
+		Engine:      r.Engine,
 		Status:      r.Status,
 		StartedAt:   r.StartedAt,
 		FinishedAt:  r.FinishedAt,

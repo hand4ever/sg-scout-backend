@@ -7,23 +7,28 @@ import "time"
 
 // CrawlerTask is a crawl/monitor task holding locked configuration.
 type CrawlerTask struct {
-	ID                uint64    `gorm:"primaryKey;autoIncrement" json:"id"`
-	SourceType        string    `gorm:"size:32;not null;default:web" json:"source_type"`
-	EntryURL          string    `gorm:"size:2048;not null" json:"entry_url"`
-	EntryURLKey       string    `gorm:"size:64;not null" json:"-"`
-	Depth             int       `gorm:"not null;default:0" json:"depth"`
-	IncludeSubdomain  bool      `gorm:"not null;default:false" json:"include_subdomain"`
-	PageLimit         int       `gorm:"not null;default:10" json:"page_limit"`
-	RetryTimes        int       `gorm:"not null;default:3" json:"retry_times"`
-	RetryIntervalS    int       `gorm:"not null;default:2" json:"retry_interval_s"`
-	ThrottlePages     int       `gorm:"not null;default:100" json:"throttle_pages"`
-	ThrottleSeconds   int       `gorm:"not null;default:60" json:"throttle_seconds"`
-	TimeoutS          int       `gorm:"not null;default:600" json:"timeout_s"`
-	Status            string    `gorm:"size:16;not null;default:pending;index" json:"status"`
-	PageCount         int       `gorm:"not null;default:0" json:"page_count"`
-	LastRunAt         *time.Time `json:"last_run_at"`
-	CreatedAt         time.Time `json:"created_at"`
-	UpdatedAt         time.Time `json:"updated_at"`
+	ID               uint64     `gorm:"primaryKey;autoIncrement" json:"id"`
+	SourceType       string     `gorm:"size:32;not null;default:web" json:"source_type"`
+	Engine           string     `gorm:"size:16;not null;default:goquery" json:"engine"` // archived engine snapshot (feature 002 FR-003)
+	EntryURL         string     `gorm:"size:2048;not null" json:"entry_url"`
+	EntryURLKey      string     `gorm:"size:64;not null" json:"-"`
+	Depth            int        `gorm:"not null;default:0" json:"depth"`
+	IncludeSubdomain bool       `gorm:"not null;default:false" json:"include_subdomain"`
+	AllowHosts       string     `gorm:"size:512;not null;default:''" json:"allow_hosts"`   // comma-separated external hosts allowed past the same-site boundary (feature 002 FR-0XX)
+	IgnoreRobots     bool       `gorm:"not null;default:false" json:"-"`                   // true = fetch robots-disallowed paths (wechat). API surfaces the inverse as respect_robots.
+	IncludeURL       string     `gorm:"size:1024;not null;default:''" json:"include_url"`  // comma-separated URL substrings; only links containing one are followed (entry always fetched)
+	ContentMode      string     `gorm:"size:16;not null;default:main" json:"content_mode"` // main = article-only (readability); full = whole page
+	PageLimit        int        `gorm:"not null;default:10" json:"page_limit"`
+	RetryTimes       int        `gorm:"not null;default:3" json:"retry_times"`
+	RetryIntervalS   int        `gorm:"not null;default:2" json:"retry_interval_s"`
+	ThrottlePages    int        `gorm:"not null;default:100" json:"throttle_pages"`
+	ThrottleSeconds  int        `gorm:"not null;default:60" json:"throttle_seconds"`
+	TimeoutS         int        `gorm:"not null;default:600" json:"timeout_s"`
+	Status           string     `gorm:"size:16;not null;default:pending;index" json:"status"`
+	PageCount        int        `gorm:"not null;default:0" json:"page_count"`
+	LastRunAt        *time.Time `json:"last_run_at"`
+	CreatedAt        time.Time  `json:"created_at"`
+	UpdatedAt        time.Time  `json:"updated_at"`
 }
 
 func (CrawlerTask) TableName() string { return "crawler_task" }
@@ -32,8 +37,8 @@ func (CrawlerTask) TableName() string { return "crawler_task" }
 type CrawlerRun struct {
 	ID          uint64     `gorm:"primaryKey;autoIncrement" json:"id"`
 	TaskID      uint64     `gorm:"not null;index:idx_run_task_created,priority:1" json:"task_id"`
-	Kind        string     `gorm:"size:8;not null" json:"kind"` // crawl | check
-	Engine      string     `gorm:"size:16;not null;default:firecrawl" json:"engine"`
+	Kind        string     `gorm:"size:8;not null" json:"kind"`                    // crawl | check
+	Engine      string     `gorm:"size:16;not null;default:goquery" json:"engine"` // engine snapshot from task (feature 002)
 	JobID       string     `gorm:"size:64" json:"job_id"`
 	Status      string     `gorm:"size:16;not null;default:queued;index" json:"status"` // queued|running|stopped|done
 	StartedAt   *time.Time `json:"started_at"`
@@ -54,17 +59,17 @@ func (CrawlerRun) TableName() string { return "crawler_run" }
 
 // CrawlerPage is one crawled page, unique per (task, normalized url key).
 type CrawlerPage struct {
-	ID              uint64    `gorm:"primaryKey;autoIncrement" json:"id"`
-	TaskID          uint64    `gorm:"not null;index" json:"task_id"`
-	URL             string    `gorm:"size:2048;not null" json:"url"`
-	URLKey          string    `gorm:"size:64;not null" json:"-"` // unique per task enforced by schema uk_task_urlkey
-	Depth           int       `gorm:"not null;default:0" json:"depth"`
-	Title           string    `gorm:"size:1024;not null;default:''" json:"title"`
-	LatestVersion   int       `gorm:"not null;default:0" json:"latest_version"`
-	LatestFingerprint string  `gorm:"size:64;not null;default:''" json:"latest_fingerprint"`
-	FirstSeenAt     time.Time `json:"first_seen_at"`
-	LastSeenAt      time.Time `json:"last_seen_at"`
-	CreatedAt       time.Time `json:"created_at"`
+	ID                uint64    `gorm:"primaryKey;autoIncrement" json:"id"`
+	TaskID            uint64    `gorm:"not null;index" json:"task_id"`
+	URL               string    `gorm:"size:2048;not null" json:"url"`
+	URLKey            string    `gorm:"size:64;not null" json:"-"` // unique per task enforced by schema uk_task_urlkey
+	Depth             int       `gorm:"not null;default:0" json:"depth"`
+	Title             string    `gorm:"size:1024;not null;default:''" json:"title"`
+	LatestVersion     int       `gorm:"not null;default:0" json:"latest_version"`
+	LatestFingerprint string    `gorm:"size:64;not null;default:''" json:"latest_fingerprint"`
+	FirstSeenAt       time.Time `json:"first_seen_at"`
+	LastSeenAt        time.Time `json:"last_seen_at"`
+	CreatedAt         time.Time `json:"created_at"`
 }
 
 func (CrawlerPage) TableName() string { return "crawler_page" }
