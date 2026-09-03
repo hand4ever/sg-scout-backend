@@ -12,6 +12,22 @@ type Config struct {
 	App      AppConfig      `toml:"app"`
 	Server   ServerConfig   `toml:"server"`
 	Database DatabaseConfig `toml:"database"`
+	Crawler  CrawlerConfig  `toml:"crawler"`
+}
+
+// CrawlerConfig holds crawler module settings (concurrency + engine).
+type CrawlerConfig struct {
+	Concurrency int          `toml:"concurrency"`
+	StorageRoot string       `toml:"storage_root"`
+	Engine      EngineConfig `toml:"engine"`
+}
+
+// EngineConfig holds the crawl engine connection settings.
+// provider/based on research.md rev2: Firecrawl v2 API (cloud by default).
+type EngineConfig struct {
+	Provider string `toml:"provider"`
+	BaseURL  string `toml:"base_url"`
+	APIKey   string `toml:"api_key"`
 }
 
 // AppConfig holds application metadata.
@@ -55,24 +71,30 @@ func defaultConfig() *Config {
 				DSN: "root:password@tcp(127.0.0.1:3306)/sg_scout?charset=utf8mb4&parseTime=True&loc=Local",
 			},
 		},
+		Crawler: CrawlerConfig{
+			Concurrency: 1,
+			StorageRoot: "./data",
+			Engine: EngineConfig{
+				Provider: "firecrawl",
+				BaseURL:  "https://api.firecrawl.dev",
+				APIKey:   "",
+			},
+		},
 	}
 }
 
 // InitConfig loads config from the given TOML file path.
-// A missing or malformed file falls back to defaults (fail-soft) and logs a notice.
+// Strict by Constitution VI (fail fast): a missing or malformed config file
+// MUST return an error so the caller can terminate with a non-zero exit.
+// Cfg keeps safe defaults only as pre-load state; they are NOT a fallback path.
 func InitConfig(configPath string) error {
 	data, err := os.ReadFile(configPath)
 	if err != nil {
-		if os.IsNotExist(err) {
-			fmt.Printf("[config] config file not found at %s, using defaults\n", configPath)
-			return nil
-		}
-		return fmt.Errorf("read config file: %w", err)
+		return fmt.Errorf("config file not found at %s (constitution VI: fail fast)", configPath)
 	}
 
 	if err := toml.Unmarshal(data, Cfg); err != nil {
-		fmt.Printf("[config] failed to parse %s: %v, using defaults\n", configPath, err)
-		return nil
+		return fmt.Errorf("parse config file %s: %w", configPath, err)
 	}
 
 	fmt.Printf("[config] loaded config from %s\n", configPath)

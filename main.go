@@ -1,7 +1,9 @@
 package main
 
 import (
+	"context"
 	"net/http"
+	"os"
 
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
@@ -9,6 +11,7 @@ import (
 	"sg.scout/middle"
 	"sg.scout/model"
 	"sg.scout/router"
+	"sg.scout/service/crawler"
 )
 
 // corsConfig defines the CORS middleware configuration.
@@ -29,10 +32,11 @@ func main() {
 		panic("failed to load config: " + err.Error())
 	}
 
-	// MySQL connect failure does NOT block startup: business APIs report their
-	// own DB errors, so local front-end integration works without a database.
+	// Constitution VI (fail fast): an unreachable database MUST terminate
+	// startup with a non-zero exit instead of silently degrading.
 	if err := model.InitDB(config.Cfg.Database.MySQL.DSN); err != nil {
 		e.Logger.Error("failed to connect database", "error", err)
+		os.Exit(1)
 	}
 
 	e.Use(middleware.RequestLogger())
@@ -42,6 +46,10 @@ func main() {
 	e.Use(middle.CostTime)
 
 	router.Router(e)
+
+	// crawler scheduler: consumes queued crawl/check runs (concurrency from config).
+	crawler.StartScheduler(context.Background())
+	defer crawler.StopScheduler()
 
 	if err := e.Start(config.Cfg.Server.Port); err != nil {
 		e.Logger.Error("failed to start server", "error", err)

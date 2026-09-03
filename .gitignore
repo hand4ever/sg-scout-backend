@@ -31,6 +31,7 @@ Thumbs.db
 
 # Environment
 .env
+config.toml  # local secrets (firecrawl key etc.) - use config.toml.example
 .env.local
 .env.*.local
 
@@ -41,3 +42,6 @@ logs/
 # Temp
 tmp/
 temp/
+
+# crawler artifact files (runtime, git-ignored)
+data/

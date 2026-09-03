@@ -1,0 +1,22 @@
+# SG Scout Backend Configuration
+# Copy to config.toml and fill in local values. config.toml is git-ignored (secrets).
+
+[app]
+name = "SG Scout"
+version = "0.1.0"
+build_time = "2026-09-02"
+
+[server]
+port = ":1324"
+
+[database.mysql]
+dsn = "root:@tcp(127.0.0.1:3306)/sg_scout?charset=utf8mb4&parseTime=True&loc=Local"
+
+[crawler]
+concurrency = 1            # concurrent crawl runs (default 1 = queued)
+storage_root = "./data"    # md/html artifact files root
+
+[crawler.engine]
+provider = "firecrawl"     # engine backend (research rev2)
+base_url = "https://api.firecrawl.dev"  # self-host alternative: http://localhost:3002
+api_key = ""               # Firecrawl cloud key (fc-...)

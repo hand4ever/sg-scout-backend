@@ -6,6 +6,7 @@ import (
 
 // Router registers all route groups.
 func Router(e *echo.Echo) {
-	common(e) // public/common components
-	demo(e)   // demo endpoints
+	common(e)   // public/common components
+	demo(e)     // demo endpoints
+	crawler(e)  // crawler module (001-page-crawler-monitor)
 }
