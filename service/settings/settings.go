@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"slices"
 	"strings"
 	"time"
 
@@ -17,12 +18,22 @@ import (
 	"sg.scout/service/crawler/engine"
 )
 
-// Keys of the v1 registry (data-model.md §3).
+// Keys of the v1 registry (data-model.md §3) + proofreading defaults
+// (feature 005, added 2026-09-04: model & effort for new llm engines).
 const (
 	KeyDefaultEngine        = "default_engine"
 	KeySchedulerConcurrency = "scheduler_concurrency"
 	KeyStorageRoot          = "storage_root"
+
+	KeyProofreadDefaultModel = "proofread_default_model" // 新建大模型引擎的默认模型
+	KeyProofreadEffort       = "proofread_effort"        // 新建大模型引擎的默认思考强度
 )
+
+// EffortOptions are the accepted effort values (deepseek V4 thinking modes).
+var EffortOptions = []string{"none", "low", "high", "max"}
+
+// ModelOptions are the suggested model ids for the datalist picker.
+var ModelOptions = []string{"deepseek-v4-flash", "deepseek-v4-pro"}
 
 // Effect marks when a setting takes effect (shown in the settings UI).
 type Effect string
@@ -39,6 +50,7 @@ type Def struct {
 	Default any    // code default (used when neither DB nor config.toml provides)
 	Effect  Effect
 	Desc    string
+	Options []string // non-empty → UI renders a select (string keys only)
 }
 
 var registry = []Def{
@@ -48,6 +60,10 @@ var registry = []Def{
 		Desc: "任务执行并发数（worker 池启动时创建）"},
 	{Key: KeyStorageRoot, Type: "string", Default: "./data", Effect: EffectRestart,
 		Desc: "内容落盘根目录（启动时初始化）"},
+	{Key: KeyProofreadDefaultModel, Type: "string", Default: "deepseek-v4-flash", Effect: EffectImmediate,
+		Desc: "新建大模型校对引擎的默认模型（deepseek V4 系列）", Options: ModelOptions},
+	{Key: KeyProofreadEffort, Type: "string", Default: "none", Effect: EffectImmediate,
+		Desc: "新建大模型校对引擎的默认思考强度（none=关思考/快）", Options: EffortOptions},
 }
 
 // Lookup returns the registered definition of key.
@@ -177,11 +193,12 @@ func GetInt(key string) (int, bool) {
 
 // Item is one setting row for GET /crawler/settings.
 type Item struct {
-	Key         string `json:"key"`
-	Value       any    `json:"value"`
-	Default     any    `json:"default_value"`
-	Effect      Effect `json:"effect"`
-	Description string `json:"description"`
+	Key         string   `json:"key"`
+	Value       any      `json:"value"`
+	Default     any      `json:"default_value"`
+	Effect      Effect   `json:"effect"`
+	Description string   `json:"description"`
+	Options     []string `json:"options,omitempty"` // non-empty → UI renders a select
 }
 
 // Items returns every registered setting with its current value and metadata.
@@ -206,7 +223,7 @@ func Items() ([]Item, error) {
 			}
 			v = s
 		}
-		out = append(out, Item{Key: d.Key, Value: v, Default: d.Default, Effect: d.Effect, Description: d.Desc})
+		out = append(out, Item{Key: d.Key, Value: v, Default: d.Default, Effect: d.Effect, Description: d.Desc, Options: d.Options})
 	}
 	return out, nil
 }
@@ -226,6 +243,9 @@ func Validate(key string, v any) error {
 		}
 		if s == "" {
 			return fmt.Errorf("配置 %s 不能为空", key)
+		}
+		if len(def.Options) > 0 && !slices.Contains(def.Options, s) {
+			return fmt.Errorf("配置 %s 取值无效（可选：%s）", key, strings.Join(def.Options, " / "))
 		}
 		if key == KeyDefaultEngine && !engine.Lookup(s) {
 			return fmt.Errorf("未知引擎 %q（可用：firecrawl / crawl4ai / goquery）", s)

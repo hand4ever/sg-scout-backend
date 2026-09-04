@@ -15,7 +15,8 @@ func restoreCfg(t *testing.T) {
 
 func TestRegistryComplete(t *testing.T) {
 	keys := RegisteredKeys()
-	want := []string{KeyDefaultEngine, KeySchedulerConcurrency, KeyStorageRoot}
+	want := []string{KeyDefaultEngine, KeySchedulerConcurrency, KeyStorageRoot,
+		KeyProofreadDefaultModel, KeyProofreadEffort}
 	if len(keys) != len(want) {
 		t.Fatalf("registered keys = %v, want %v", keys, want)
 	}
@@ -30,6 +31,13 @@ func TestRegistryComplete(t *testing.T) {
 		if d.Default == nil || d.Effect == "" {
 			t.Fatalf("key %s: default/effect incomplete: %+v", k, d)
 		}
+	}
+	// Options-backed keys expose non-empty select options.
+	if d, _ := Lookup(KeyProofreadEffort); len(d.Options) != 4 {
+		t.Fatalf("proofread_effort options = %v, want 4 entries", d.Options)
+	}
+	if d, _ := Lookup(KeyProofreadDefaultModel); len(d.Options) == 0 {
+		t.Fatal("proofread_default_model should carry model options")
 	}
 	if _, ok := Lookup("nope"); ok {
 		t.Fatal("Lookup(nope) should be false")
@@ -80,6 +88,11 @@ func TestValidate(t *testing.T) {
 		{"concurrency float(JSON)", KeySchedulerConcurrency, float64(3), false},
 		{"concurrency string type", KeySchedulerConcurrency, "3", true},
 		{"storage ok", KeyStorageRoot, "./data", false},
+		{"model ok", KeyProofreadDefaultModel, "deepseek-v4-flash", false},
+		{"model bad", KeyProofreadDefaultModel, "gpt-4", true},
+		{"effort none ok", KeyProofreadEffort, "none", false},
+		{"effort high ok", KeyProofreadEffort, "high", false},
+		{"effort bad", KeyProofreadEffort, "super", true},
 	}
 	for _, c := range cases {
 		err := Validate(c.key, c.value)

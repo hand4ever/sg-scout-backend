@@ -111,9 +111,25 @@ sg-scout-backend/
 | GET | `/proofreads/:id/errata/export` | 导出勘误表（CSV，仅已接受） |
 | POST | `/proofreads/:id/revision-doc` | 基于修订稿派生新校对文档 |
 
+### 自动校对引擎 API（feature 005-auto-proofreading，契约见 `../sg-scout/specs/005-auto-proofreading/contracts/api.md`）
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/proofreads/engines/types` | 引擎类型注册表（lexicon/llm/httpapi + 配置字段） |
+| GET | `/proofreads/engines` | 引擎实例列表 |
+| POST | `/proofreads/engines` | 创建引擎实例（默认停用；启用即校验） |
+| PATCH | `/proofreads/engines/:eid` | 更新引擎实例（含启用/停用） |
+| DELETE | `/proofreads/engines/:eid` | 删除引擎实例（历史卡片保留来源快照） |
+| POST | `/proofreads/:id/auto-check` | 开始自动校对（异步，全部已启用引擎） |
+| GET | `/proofreads/:id/runs` | 自动校对运行记录（只读，倒序） |
+| GET | `/proofreads/:id/runs/:rid` | 运行详情（引擎级状态/产出/耗时/失败原因） |
+| GET | `/proofreads/:id?source=` | 卡片来源筛选（all/manual/ignored/engine/engine:{名}） |
+| POST | `/proofreads/:id/cards/:cid/state` | 状态改判扩展：ignored + 撤回（pending）+ 接受冲突 409 |
+
 ## 更新日志
 
 - 2026-09-04 feature 004：新增校对模块路由组 `/proofreads`（三表 schema/007-proofread.sql）
+- 2026-09-04 feature 005：自动校对引擎层——引擎实例 CRUD（schema/008：ALTER proofread_card + proofread_engine/proofread_run 两表）、auto-check 异步运行、卡片来源/ignored 状态扩展、LLM provider 密钥走 config.toml `[proofread.providers.*]`（永不落 DB）
 
 ## 本地开发
 

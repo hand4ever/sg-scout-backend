@@ -47,6 +47,7 @@ const (
 	StatusPending  = "pending"  // 待确认
 	StatusAccepted = "accepted" // 已接受
 	StatusRejected = "rejected" // 已驳回
+	StatusIgnored  = "ignored"  // 已忽略（005：不采纳、折叠可恢复；区别于驳回）
 
 	SourcePage     = "page"     // 任务内已抓页面（1:1）
 	SourceText     = "text"     // 自由粘贴文本

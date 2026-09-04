@@ -68,12 +68,14 @@ func (*_Proofread) ListDocs(c *echo.Context) error {
 }
 
 // GetDoc GET /proofreads/{id} — detail with draft content, cards, chain.
+// ?source= filters cards (005 FR-008): all|manual|ignored|engine|engine:{name}.
 func (*_Proofread) GetDoc(c *echo.Context) error {
 	id, err := pathID(c, "id")
 	if err != nil {
 		return err
 	}
-	dv, err := proofreadsvc.GetDocDetail(id)
+	source := c.QueryParam("source")
+	dv, err := proofreadsvc.GetDocDetail(id, source)
 	if err != nil {
 		return respProofreadErr(c, err)
 	}

@@ -12,6 +12,7 @@ import (
 	"sg.scout/model"
 	"sg.scout/router"
 	"sg.scout/service/crawler"
+	proofreadsvc "sg.scout/service/proofread"
 	"sg.scout/service/settings"
 )
 
@@ -61,6 +62,10 @@ func main() {
 	e.Use(middle.CostTime)
 
 	router.Router(e)
+
+	// Feature 005: any auto-check run left running by a previous process is
+	// flagged failed at startup (research D8 restart 兜底).
+	proofreadsvc.MarkInterruptedRuns()
 
 	// crawler scheduler: consumes queued crawl/check runs (concurrency from config).
 	crawler.StartScheduler(context.Background())

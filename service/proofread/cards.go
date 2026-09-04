@@ -171,18 +171,38 @@ func DeleteCard(docID, cardID uint64) error {
 	return nil
 }
 
-// SetCardState re-adjudicates a card between pending/accepted/rejected
-// (FR-008). Rejection may carry an optional reason which is kept verbatim
-// when the card moves to another state.
+// SetCardState re-adjudicates a card between pending/accepted/rejected/ignored
+// (FR-008 + feature 005 Q1 extension: ignored = dismiss-but-recoverable,
+// distinct from rejected; 撤回 = any state back to pending). Rejection may
+// carry an optional reason kept verbatim across further state moves.
+// Accepting a card whose range overlaps another accepted card is rejected
+// (research D5): the accepted set must stay range-disjoint so the revision
+// apply algorithm (004 D4) stays conflict-free.
 func SetCardState(docID, cardID uint64, req *entityproofread.CardStateReq) (*model.ProofreadCard, error) {
 	if req.Status != entityproofread.StatusPending &&
 		req.Status != entityproofread.StatusAccepted &&
-		req.Status != entityproofread.StatusRejected {
-		return nil, fmt.Errorf("%w: 无效的状态（pending/accepted/rejected）", ErrBadRequest)
+		req.Status != entityproofread.StatusRejected &&
+		req.Status != entityproofread.StatusIgnored {
+		return nil, fmt.Errorf("%w: 无效的状态（pending/accepted/rejected/ignored）", ErrBadRequest)
 	}
 	card, err := cardByID(docID, cardID)
 	if err != nil {
 		return nil, err
+	}
+	if req.Status == entityproofread.StatusAccepted && card.Status != entityproofread.StatusAccepted {
+		// Accept-conflict guard (research D5/Q3): another accepted card must
+		// not already overlap this card's range.
+		var accepted []model.ProofreadCard
+		if err := model.DB.Where("doc_id = ? AND status = ? AND id <> ?", docID,
+			entityproofread.StatusAccepted, cardID).Find(&accepted).Error; err != nil {
+			return nil, err
+		}
+		for i := range accepted {
+			e := &accepted[i]
+			if anchorsOverlap(anchorOf(e), anchorOf(card)) {
+				return nil, fmt.Errorf("%w: 该区域已接受其他建议（L%d），请先撤回再改判", ErrConflict, e.StartLine)
+			}
+		}
 	}
 	before := card.Status
 	card.Status = req.Status
@@ -378,6 +398,8 @@ func statusLabelCN(s string) string {
 		return "已接受"
 	case entityproofread.StatusRejected:
 		return "已驳回"
+	case entityproofread.StatusIgnored:
+		return "已忽略"
 	}
 	return s
 }

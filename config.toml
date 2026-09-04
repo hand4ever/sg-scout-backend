@@ -25,3 +25,8 @@ api_key = "fc-83d4cba2bd16412499d4255dc8f36bf5"
 [crawler.engine.crawl4ai]
 base_url = "http://127.0.0.1:11235"
 api_token = "local-sidecar"
+
+[proofread.providers.deepseek]
+base_url = "https://api.deepseek.com/v1"
+api_key = "sk-381bb935662f4dd78eede50dd49a4aff"
+timeout_s = 120

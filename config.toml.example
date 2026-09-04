@@ -20,3 +20,15 @@ storage_root = "./data"    # md/html artifact files root
 provider = "firecrawl"     # engine backend (research rev2)
 base_url = "https://api.firecrawl.dev"  # self-host alternative: http://localhost:3002
 api_key = ""               # Firecrawl cloud key (fc-...)
+
+# Auto-proofreading LLM providers (feature 005). Secrets live ONLY here —
+# never in the DB (research D3). Engine instances reference a provider by name.
+# [proofread.providers.deepseek]
+# base_url = "https://api.deepseek.com/v1"   # OpenAI-compatible chat/completions
+# api_key = "sk-..."                          # your key
+# timeout_s = 120                             # per-call timeout (default 120)
+
+# [proofread.providers.local-ollama]          # optional: local models
+# base_url = "http://127.0.0.1:11434/v1"
+# api_key = "ollama"
+# timeout_s = 300

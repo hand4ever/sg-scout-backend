@@ -26,4 +26,14 @@ func proofread(e *echo.Echo) {
 	g.GET("/:id/revision", handler.Proofread.RevisionPreview)
 	g.GET("/:id/revision/export", handler.Proofread.ExportRevision)
 	g.GET("/:id/errata/export", handler.Proofread.ExportErrata)
+	// Engine instance management (feature 005 US2).
+	g.GET("/engines/types", handler.ProofreadEngine.ListTypes)
+	g.GET("/engines", handler.ProofreadEngine.List)
+	g.POST("/engines", handler.ProofreadEngine.Create)
+	g.PATCH("/engines/:eid", handler.ProofreadEngine.Update)
+	g.DELETE("/engines/:eid", handler.ProofreadEngine.Delete)
+	// Auto-check run endpoints (feature 005 US1/US6).
+	g.POST("/:id/auto-check", handler.ProofreadRun.StartAutoCheck)
+	g.GET("/:id/runs", handler.ProofreadRun.ListRuns)
+	g.GET("/:id/runs/:rid", handler.ProofreadRun.RunDetail)
 }

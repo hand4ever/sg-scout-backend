@@ -25,6 +25,9 @@ type ProofreadDocument struct {
 func (ProofreadDocument) TableName() string { return "proofread_document" }
 
 // ProofreadCard is one proofreading item anchored into the draft line stream.
+// Status vocabulary (feature 005 extension): pending | accepted | rejected |
+// ignored — see SetCardState. Source marks provenance: manual (004 human-created
+// cards) | engine (auto-check candidates carrying engine_name snapshot + run_id).
 type ProofreadCard struct {
 	ID            uint64    `gorm:"primaryKey;autoIncrement" json:"id"`
 	DocID         uint64    `gorm:"not null;index:idx_card_doc_order,priority:1;index:idx_card_status,priority:1" json:"doc_id"`
@@ -38,7 +41,10 @@ type ProofreadCard struct {
 	Reason        string    `gorm:"size:2000;not null;default:''" json:"reason"`
 	Status        string    `gorm:"size:16;not null;default:pending;index:idx_card_status,priority:2" json:"status"`
 	RejectReason  string    `gorm:"size:2000;not null;default:''" json:"reject_reason"`
-	AnchorVersion *int      `json:"anchor_version"` // doc.draft_version at creation
+	AnchorVersion *int      `json:"anchor_version"`                                  // doc.draft_version at creation
+	Source        string    `gorm:"size:16;not null;default:manual" json:"source"`   // manual | engine (005)
+	EngineName    string    `gorm:"size:128;not null;default:''" json:"engine_name"` // engine: display-name snapshot (005)
+	RunID         *uint64   `gorm:"index:idx_card_run" json:"run_id"`                // engine: producing run (005)
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
 }

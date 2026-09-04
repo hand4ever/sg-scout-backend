@@ -183,8 +183,9 @@ func ListDocs(source string, pageID uint64) ([]DocListItem, error) {
 
 // GetDocDetail assembles doc + draft content + ordered cards + parent chain;
 // for page docs it also live-reads the crawler page's latest version so the
-// UI can prompt an upgrade (FR-018).
-func GetDocDetail(id uint64) (*DocDetailView, error) {
+// UI can prompt an upgrade (FR-018). source filters the returned cards
+// (feature 005 FR-008): all | manual | ignored | engine | engine:{name}.
+func GetDocDetail(id uint64, source string) (*DocDetailView, error) {
 	doc, err := docByID(id)
 	if err != nil {
 		return nil, err
@@ -197,8 +198,22 @@ func GetDocDetail(id uint64) (*DocDetailView, error) {
 			dv.Doc.LatestVersion = &latest
 		}
 	}
-	if err := model.DB.Where("doc_id = ?", doc.ID).
-		Order("start_line ASC, start_off ASC, id ASC").Find(&dv.Cards).Error; err != nil {
+	q := model.DB.Where("doc_id = ?", doc.ID)
+	switch {
+	case source == "" || source == "all":
+		// no filter — full list (004 behavior)
+	case source == entityproofread.SourceManual:
+		q = q.Where("source = ?", entityproofread.SourceManual)
+	case source == entityproofread.StatusIgnored:
+		q = q.Where("status = ?", entityproofread.StatusIgnored)
+	case source == entityproofread.SourceEngine:
+		q = q.Where("source = ?", entityproofread.SourceEngine)
+	case strings.HasPrefix(source, "engine:"):
+		q = q.Where("source = ? AND engine_name = ?", entityproofread.SourceEngine, strings.TrimPrefix(source, "engine:"))
+	default:
+		return nil, fmt.Errorf("%w: 无效的 source 筛选", ErrBadRequest)
+	}
+	if err := q.Order("start_line ASC, start_off ASC, id ASC").Find(&dv.Cards).Error; err != nil {
 		return nil, err
 	}
 	if doc.ParentDocID != nil {
@@ -322,9 +337,13 @@ func docByID(id uint64) (*model.ProofreadDocument, error) {
 	return &doc, nil
 }
 
-// deleteDocRows removes one document's log/card/doc rows in a transaction.
+// deleteDocRows removes one document's run/log/card/doc rows in a transaction
+// (005 extends the 004 cascade with auto runs, data-model §4).
 func deleteDocRows(docID uint64) error {
 	return model.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("doc_id = ?", docID).Delete(&model.ProofreadAutoRun{}).Error; err != nil {
+			return err
+		}
 		if err := tx.Where("doc_id = ?", docID).Delete(&model.ProofreadLog{}).Error; err != nil {
 			return err
 		}

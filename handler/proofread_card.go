@@ -83,7 +83,7 @@ func (*_Proofread) SetCardState(c *echo.Context) error {
 		return response.NotOk(c, "参数有误")
 	}
 	if _, err := strconv.ParseInt(req.Status, 10, 64); err == nil {
-		return response.NotOk(c, "参数错误：status 需为 pending/accepted/rejected")
+		return response.NotOk(c, "参数错误：status 需为 pending/accepted/rejected/ignored")
 	}
 	card, err := proofreadsvc.SetCardState(id, cid, &req)
 	if err != nil {

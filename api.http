@@ -186,3 +186,66 @@ GET {{host}}/proofreads/1/errata/export
 
 ### 基于修订稿派生新校对文档
 POST {{host}}/proofreads/1/revision-doc
+
+### ================= 自动校对引擎（feature 005）=================
+
+### 引擎类型注册表（静态：lexicon/llm/httpapi + 配置字段 schema）
+GET {{host}}/proofreads/engines/types
+
+### 引擎实例列表
+GET {{host}}/proofreads/engines
+
+### 创建词库引擎实例（enabled=true 触发深度校验：词库文件可读）
+POST {{host}}/proofreads/engines
+Content-Type: application/json
+
+{
+  "engine_type": "lexicon",
+  "name": "错词词库",
+  "enabled": true,
+  "config": { "dict_path": "./data/proofread/lexicon.txt" }
+}
+
+### 创建大模型引擎（需 config.toml 已配 [proofread.providers.deepseek]；缺 provider 将 400）
+POST {{host}}/proofreads/engines
+Content-Type: application/json
+
+{
+  "engine_type": "llm",
+  "name": "大模型 A",
+  "enabled": true,
+  "config": { "provider": "deepseek", "model": "deepseek-chat" }
+}
+
+### 启用/停用引擎（PATCH 部分更新；0→1 深度校验）
+PATCH {{host}}/proofreads/engines/1
+Content-Type: application/json
+
+{ "enabled": false }
+
+### 删除引擎实例（历史卡片保留来源快照）
+DELETE {{host}}/proofreads/engines/1
+
+### 开始自动校对（异步；无启用引擎 400 / 并发 409）
+POST {{host}}/proofreads/1/auto-check
+
+### 运行记录列表（倒序 limit 50）
+GET {{host}}/proofreads/1/runs
+
+### 运行详情（引擎级：status/cards/dropped/cost_ms/error；轮询至终态）
+GET {{host}}/proofreads/1/runs/1
+
+### 文档详情卡片来源筛选（all|manual|ignored|engine|engine:{引擎名}）
+GET {{host}}/proofreads/1?source=engine
+
+### 卡片状态改判：忽略（ignored）/ 撤回（pending，任何已处理态可撤回）
+POST {{host}}/proofreads/1/cards/1/state
+Content-Type: application/json
+
+{ "status": "ignored" }
+
+### 接受冲突校验：同区域已接受其他建议 → 409
+POST {{host}}/proofreads/1/cards/1/state
+Content-Type: application/json
+
+{ "status": "accepted" }

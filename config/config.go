@@ -9,10 +9,27 @@ import (
 
 // Config holds all configuration sections.
 type Config struct {
-	App      AppConfig      `toml:"app"`
-	Server   ServerConfig   `toml:"server"`
-	Database DatabaseConfig `toml:"database"`
-	Crawler  CrawlerConfig  `toml:"crawler"`
+	App       AppConfig       `toml:"app"`
+	Server    ServerConfig    `toml:"server"`
+	Database  DatabaseConfig  `toml:"database"`
+	Crawler   CrawlerConfig   `toml:"crawler"`
+	Proofread ProofreadConfig `toml:"proofread"`
+}
+
+// ProofreadConfig holds auto-proofreading engine connection settings
+// (feature 005). Secrets (provider base_url/api_key) live ONLY in this file —
+// never in the DB (research D3). Providers map is keyed by a user-chosen name
+// that engine instances reference (e.g. deepseek / local-ollama).
+type ProofreadConfig struct {
+	Providers map[string]ProofreadProvider `toml:"providers"`
+}
+
+// ProofreadProvider is one LLM / third-party API connection (OpenAI-compatible
+// chat/completions for llm engines; contracts appendix A for httpapi engines).
+type ProofreadProvider struct {
+	BaseURL  string `toml:"base_url"`
+	APIKey   string `toml:"api_key"`
+	TimeoutS int    `toml:"timeout_s"` // default 120 when 0 (spec A6)
 }
 
 // CrawlerConfig holds crawler module settings (concurrency + engine).
@@ -111,6 +128,9 @@ func defaultConfig() *Config {
 				Provider: "",
 				BaseURL:  "https://api.firecrawl.dev",
 			},
+		},
+		Proofread: ProofreadConfig{
+			Providers: map[string]ProofreadProvider{},
 		},
 	}
 }
